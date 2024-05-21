@@ -8,6 +8,7 @@
 #include <thread>
 
 using namespace std;
+using namespace chrono;
 
 struct player {
     int vivo = 1;
@@ -36,24 +37,46 @@ struct bomba {
     int maxDistBomba = 3;
 };
 
+void geraMapa(int m[13][26]) {
+    for(int l = 0; l < 13; l++) {
+        for (int c = 0; c < 26; c++){
+            if (m[l][c] == 0 && (rand() % 5 == 0))
+            {
+                m[l][c] = 2; // Parede quebrável
+            }
+        }
+    }
+    m[1][1] = 0;
+    m[1][2] = 0;
+    m[2][1] = 0;
+}
+
 bool colisaoBool(int p, player& p1){
     if (p1.intangivel && p == 2) {
         return true;
     }
-    // Verifica se o valor de 'p' nÃ£o Ã© igual a nenhum dos valores listados
+    // Verifica se o valor de 'p' não é igual a nenhum dos valores listados
     if (p != 0 && p != 5 && p != 6 && p != 7 && p != 8 && p != 9 && p != 10 && p != 11 && p != 12) {
-        return false; // Retorna false se 'p' nÃ£o for igual a nenhum desses valores
+        return false; // Retorna false se 'p' não for igual a nenhum desses valores
     }
     else {
         return true; // Retorna true se 'p' for igual a qualquer um desses valores
     }
 }
 
+bool inimigoGeradorVerificador(int m[13][26], int x, int y){
+    //Verificar se a posição é valida
+    if(m[x][y] == 1 || m[x][y] == 2) return false;
+    if((x == 1 && y == 1) || (x == 2 && y == 1) || (x == 1 && y == 2)) return false;
+    if (x == 11 && y == 24) return false;
+    return true;
+}
+
 void flick(int m[13][26], int bx, int by, bomba& b1) {
     bool pareCima = false, pareBaixo = false, pareEsq = false, pareDir = false;
 
     for (int dist = 1; dist <= b1.distBomba; dist++) {
-        // ExplosÃ£o para baixo
+        // Explosão para baixo
         if (!pareBaixo) {
             int l = bx + dist;
             int c = by;
@@ -64,7 +87,7 @@ void flick(int m[13][26], int bx, int by, bomba& b1) {
             }
         }
 
-        // ExplosÃ£o para cima
+        // Explosão para cima
         if (!pareCima) {
             int l = bx - dist;
             int c = by;
@@ -75,7 +98,7 @@ void flick(int m[13][26], int bx, int by, bomba& b1) {
             }
         }
 
-        // ExplosÃ£o para a direita
+        // Explosão para a direita
         if (!pareDir) {
             int l = bx;
             int c = by + dist;
@@ -86,7 +109,7 @@ void flick(int m[13][26], int bx, int by, bomba& b1) {
             }
         }
 
-        // ExplosÃ£o para a esquerda
+        // Explosão para a esquerda
         if (!pareEsq) {
             int l = bx;
             int c = by - dist;
@@ -99,44 +122,78 @@ void flick(int m[13][26], int bx, int by, bomba& b1) {
     }
 }
 
-void movInimigo (int m[13][26], int &ix, int &iy) {
-    int movDir = rand()%4+1;
-        switch (movDir) {
-        //para cima
-        case 1:
+void movInimigo (int m[13][26], int &ix, int &iy,int x,int y,int dificuldade) {
+    int movDir;
+    int chanceMovAleatorio;
+
+    // Definindo a chance de movimento aleatório com base na dificuldade
+    switch (dificuldade) {
+        case 1: // Fácil: 100% movimento aleatório
+            chanceMovAleatorio = 100;
+            break;
+        case 2: // Médio: 50% movimento aleatório
+            chanceMovAleatorio = 50;
+            break;
+        case 3: // Difícil: 25% movimento aleatório
+            chanceMovAleatorio = 25;
+            break;
+        default:
+            chanceMovAleatorio = 100; // Padrão para fácil
+            break;
+    }
+
+    // Decidindo a direção de movimento
+    if (rand() % 100 < chanceMovAleatorio) {
+        movDir = rand() % 4 + 1; // Movimento aleatório
+    } else {
+        // Movimento em direção ao jogador
+        if (abs(x - ix) > abs(y - iy)) {
+            if (x > ix) {
+                movDir = 2; // Mover para baixo
+            } else {
+                movDir = 1; // Mover para cima
+            }
+        } else {
+            if (y > iy) {
+                movDir = 3; // Mover para a direita
+            } else {
+                movDir = 4; // Mover para a esquerda
+            }
+        }
+    }
+
+    // Executando o movimento
+    switch (movDir) {
+        case 1: // Para cima
             ix--;
-            if (m[ix][iy] != 0 && m[ix][iy] != 5 && m[ix][iy] !=6 && m[ix][iy] !=7 && m[ix][iy] !=8 && m[ix][iy] !=9 && m[ix][iy] !=10 && m[ix][iy] !=11) {
+            if (m[ix][iy] != 0 && m[ix][iy] != 5 && m[ix][iy] != 6 && m[ix][iy] != 7 && m[ix][iy] != 8 && m[ix][iy] != 9 && m[ix][iy] != 10 && m[ix][iy] != 11) {
                 ix++;
             }
-        break;
-        //para baixo
-        case 2:
+            break;
+        case 2: // Para baixo
             ix++;
-            if (m[ix][iy] != 0 && m[ix][iy] != 5 && m[ix][iy] !=6 && m[ix][iy] !=7 && m[ix][iy] !=8 && m[ix][iy] !=9 && m[ix][iy] !=10 && m[ix][iy] !=11) {
+            if (m[ix][iy] != 0 && m[ix][iy] != 5 && m[ix][iy] != 6 && m[ix][iy] != 7 && m[ix][iy] != 8 && m[ix][iy] != 9 && m[ix][iy] != 10 && m[ix][iy] != 11) {
                 ix--;
             }
-        break;
-        //para direita
-        case 3:
+            break;
+        case 3: // Para a direita
             iy++;
-            if (m[ix][iy] != 0 && m[ix][iy] != 5 && m[ix][iy] !=6 && m[ix][iy] !=7 && m[ix][iy] !=8 && m[ix][iy] !=9 && m[ix][iy] !=10 && m[ix][iy] !=11) {
+            if (m[ix][iy] != 0 && m[ix][iy] != 5 && m[ix][iy] != 6 && m[ix][iy] != 7 && m[ix][iy] != 8 && m[ix][iy] != 9 && m[ix][iy] != 10 && m[ix][iy] != 11) {
                 iy--;
             }
-        break;
-        //para esquerda
-        case 4:
+            break;
+        case 4: // Para a esquerda
             iy--;
-            if (m[ix][iy] != 0 && m[ix][iy] != 5 && m[ix][iy] !=6 && m[ix][iy] !=7 && m[ix][iy] !=8 && m[ix][iy] !=9 && m[ix][iy] !=10 && m[ix][iy] !=11) {
+            if (m[ix][iy] != 0 && m[ix][iy] != 5 && m[ix][iy] != 6 && m[ix][iy] != 7 && m[ix][iy] != 8 && m[ix][iy] != 9 && m[ix][iy] != 10 && m[ix][iy] != 11) {
                 iy++;
             }
-        break;
-        }
+            break;
+    }
 }
 
-void verificarColisaoBomba(int l, int c, int x, int y, inimigo& i, player& p1) {
+void verificarColisaoBomba(int l, int c, int x, int y, inimigo& i) {
     if ((l == i.ix && c == i.iy) || (i.ix == x && i.iy == y)) {
         i.iniVivo = false;
-        p1.pontuacao += 100;
     }
 }
 
@@ -174,12 +231,18 @@ int main()
     //FIM: COMANDOS PARA REPOSICIONAR O CURSOR NO INICIO DA TELA
     ///ALERTA: NAO MODIFICAR O TRECHO DE CODIGO, ACIMA.
 
+    srand (time(NULL));
     int menu;
     int dificuldade = 1;
     int repetir = 1;
     int fase = 1;
+    int bombaGasta;
+    int movUtilizado;
+    int pontuacao;
+    auto inicioTempo = system_clock::now();
 
     do{
+        PlaySound(TEXT("inicio.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_LOOP);
         system("cls");
         cout << R"(
          ______     ______     __    __     ______     ______     ______     __    __     ______     __   __
@@ -200,7 +263,8 @@ int main()
                 system("cls");
                 do{
                     system("cls");
-                    using namespace chrono;
+                    PlaySound (0,0,0);
+                    PlaySound (TEXT("musica jogo.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_LOOP);
                     srand (time(NULL));
                     milliseconds intervalo(500);
                     auto inicio = high_resolution_clock::now();
@@ -211,49 +275,87 @@ int main()
                     inimigo i1;
                     inimigo i2;
                     inimigo i3;
-                    i1.iniVivo = true;
-                    i2.iniVivo = true;
-                    i3.iniVivo = true;
-                    p1.bombaGasta = 0;
-                    p1.movUtilizado = 0;
+                    inimigo i4;
+                    inimigo i5;
+                    if (fase == 1) {
+                        p1.bombaGasta = 0;
+                        p1.movUtilizado = 0;
+                        p1.pontuacao = 0;
+                    } else {
+                        p1.bombaGasta = bombaGasta;
+                        p1.movUtilizado = movUtilizado;
+                        p1.pontuacao = pontuacao;
+                    }
                     p1.vidaExtra = 0;
-                    p1.pontuacao = 0;
                     milliseconds flick1Bomba1(1000);
                     milliseconds flick1Bomba2(2000);
                     milliseconds intervaloBomba(3000);
                     milliseconds flickExplosao(3500);
                     auto inicioBomba = high_resolution_clock::now();
                     bool jogo = true; // loop do jogo para o menu depois
-                    auto inicioTempo = system_clock::now();
+                    bool ini1 = false;
+                    bool ini2 = false;
+                    bool ini3 = false;
+                    bool ini4 = false;
+                    bool ini5 = false;
 
                     int m[13][26]={ 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
                                     1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-                                    1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,1,
+                                    1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,
                                     1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-                                    1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,1,
+                                    1,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,
                                     1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-                                    1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,1,
+                                    1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,
                                     1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-                                    1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,1,
+                                    1,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,
                                     1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
-                                    1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,1,
+                                    1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,
                                     1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,12,1,
                                     1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,};
                     //Posicao inicial do personagem no consolewhile(menu != 5);
                     int x=1, y=1;
-                    //Posicao inicial inimigo1
-                    i1.ix = 11;
-                    i1.iy = 24;
-                    //Posicao inicial inimigo2
-                    i2.ix = 11;
-                    i2.iy = 1;
-                    //Posicao inicial inimigo3
-                    i3.ix = 1;
-                    i3.iy = 24;
-                    //onde estÃ¡ a bomba
+                    //Gera mapa
+                    geraMapa(m);
+                    //Gera posição do inimigo
+                    i1.iniVivo = true;
+                    i2.iniVivo = true;
+                    i3.iniVivo = true;
+                    i4.iniVivo = true;
+                    i5.iniVivo = true;
+                    // Inicialização
+                    ini1 = ini2 = ini3 = ini4 = ini5 = false;
+                    // Posicoes do inimigo
+                    while (!ini1 || !ini2 || !ini3 || !ini4 || !ini5) {
+                        if (!ini1) {
+                            i1.ix = rand() % 12 + 1;
+                            i1.iy = rand() % 25 + 1;
+                            ini1 = inimigoGeradorVerificador(m, i1.ix, i1.iy);
+                        }
+                        if (!ini2) {
+                            i2.ix = rand() % 12 + 1;
+                            i2.iy = rand() % 25 + 1;
+                            ini2 = inimigoGeradorVerificador(m, i2.ix, i2.iy);
+                        }
+                        if (!ini3) {
+                            i3.ix = rand() % 12 + 1;
+                            i3.iy = rand() % 25 + 1;
+                            ini3 = inimigoGeradorVerificador(m, i3.ix, i3.iy);
+                        }
+                        if (!ini4) {
+                            i4.ix = rand() % 12 + 1;
+                            i4.iy = rand() % 25 + 1;
+                            ini4 = inimigoGeradorVerificador(m, i4.ix, i4.iy);
+                        }
+                        if (!ini5) {
+                            i5.ix = rand() % 12 + 1;
+                            i5.iy = rand() % 25 + 1;
+                            ini5 = inimigoGeradorVerificador(m, i5.ix, i5.iy);
+                        }
+                    }
+                    //onde está a bomba
                     char tecla;
 
-                    //PontuaÃ§Ã£o de inimigo morto
+                    //Pontuação de inimigo morto
 
                     while(jogo == true){
                         ///Posiciona a escrita no iicio do console
@@ -266,25 +368,35 @@ int main()
                                     if (p1.vivo == 0) {
                                         jogo = false;
                                     }
-                                } else if((i==i1.ix && j==i1.iy && i1.iniVivo == true) || (i==i2.ix && j==i2.iy && i2.iniVivo == true) || (i==i3.ix && j==i3.iy && i3.iniVivo == true)) {
+                                } else if((i==i1.ix && j==i1.iy && i1.iniVivo == true) || (i==i2.ix && j==i2.iy && i2.iniVivo == true) || (i==i3.ix && j==i3.iy && i3.iniVivo == true) || (i==i4.ix && j==i4.iy && i4.iniVivo == true) || (i==i5.ix && j==i5.iy && i5.iniVivo == true)) {
                                     cout<<char(169); //inimigo
-                                    //Randomificador de quantos movimentos ele irÃ¡ fazer
+                                    //Randomificador de quantos movimentos ele irá fazer
                                     auto atual = high_resolution_clock::now();
                                     auto passou = duration_cast<milliseconds>(atual - inicio);
                                     if (passou >= intervalo) {
                                         //Inimigo 1
-                                        movInimigo(m, i1.ix, i1.iy);
+                                        movInimigo(m, i1.ix, i1.iy,x,y,dificuldade);
                                         if (i1.ix == x && i1.iy == y && i1.iniVivo == true) {
                                                 p1.vivo = p1.vivo - 1;
                                         }
                                         //Inimigo 2
-                                        movInimigo(m, i2.ix, i2.iy);
+                                        movInimigo(m, i2.ix, i2.iy,x,y, dificuldade);
                                         if (i2.ix == x && i2.iy == y && i2.iniVivo == true) {
                                                 p1.vivo = p1.vivo - 1;
                                         }
                                         //Inimigo 3
-                                        movInimigo(m, i3.ix, i3.iy);
+                                        movInimigo(m, i3.ix, i3.iy,x,y, dificuldade);
                                         if (i3.ix == x && i3.iy == y && i3.iniVivo == true) {
+                                                p1.vivo = p1.vivo - 1;
+                                        }
+                                        //Inimigo 4
+                                        movInimigo(m, i4.ix, i4.iy,x,y, dificuldade);
+                                        if (i4.ix == x && i4.iy == y && i4.iniVivo == true) {
+                                                p1.vivo = p1.vivo - 1;
+                                        }
+                                        //Inimigo 5
+                                        movInimigo(m, i5.ix, i5.iy,x,y, dificuldade);
+                                        if (i5.ix == x && i5.iy == y && i5.iniVivo == true) {
                                                 p1.vivo = p1.vivo - 1;
                                         }
                                         inicio = atual;
@@ -296,7 +408,7 @@ int main()
                                         case 2: cout<<char(35); break; //parede quebravel
                                         case 3: cout<<char(162); break; // bomba
                                         case 4: cout<<char(79); break; // bomba Flick
-                                        case 5: cout<<char(88); break; // area de explosÃ£o
+                                        case 5: cout<<char(88); break; // area de explosão
                                         case 6: cout<<char(157); break; // explosao
                                         // Poderes
                                         case 7: cout<<char(43); break; // aumentar range da bomba
@@ -368,6 +480,12 @@ int main()
                                         ativaBomba = true;
                                         bombaColocada = true;
                                     }
+                                case 79: case 'm': ///parar a musica
+                                        PlaySound (0,0,0);
+                                    break;
+                                case 82: case 'p': ///recomeça a musica
+                                    PlaySound(TEXT("musica jogo.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_LOOP);
+                                    break;
                             }
                         }
 
@@ -381,7 +499,7 @@ int main()
                             if (bombaColocada && passouBomba >= flick1Bomba2) {
                                 m[b1.bx][b1.by] = 4;
                             }
-                            if (bombaColocada && passouBomba >= intervaloBomba) { // ExplosÃ£o
+                            if (bombaColocada && passouBomba >= intervaloBomba) { // Explosão
                                 m[b1.bx][b1.by] = 3;
                                 bool pareExCima = false, pareExBaixo = false, pareExDir = false, pareExEsq = false;
                                 for(int l = 0; l < 13; l++) {
@@ -404,9 +522,11 @@ int main()
                                                             }
                                                         }
                                                     }
-                                                    verificarColisaoBomba(l, c, x, y, i1, p1);
-                                                    verificarColisaoBomba(l, c, x, y, i2, p1);
-                                                    verificarColisaoBomba(l, c, x, y, i3, p1);
+                                                    verificarColisaoBomba(l, c, x, y, i1);
+                                                    verificarColisaoBomba(l, c, x, y, i2);
+                                                    verificarColisaoBomba(l, c, x, y, i3);
+                                                    verificarColisaoBomba(l, c, x, y, i4);
+                                                    verificarColisaoBomba(l, c, x, y, i5);
                                                     if (m[l][c] != 7 && m[l][c] != 8 && m[l][c] != 9 && m[l][c] != 10 && m[l][c] != 11 && m[l][c] != 12) {
                                                         m[l][c] = 6;
                                                     }
@@ -433,9 +553,11 @@ int main()
                                                             }
                                                         }
                                                     }
-                                                    verificarColisaoBomba(l, c, x, y, i1, p1);
-                                                    verificarColisaoBomba(l, c, x, y, i2, p1);
-                                                    verificarColisaoBomba(l, c, x, y, i3, p1);
+                                                    verificarColisaoBomba(l, c, x, y, i1);
+                                                    verificarColisaoBomba(l, c, x, y, i2);
+                                                    verificarColisaoBomba(l, c, x, y, i3);
+                                                    verificarColisaoBomba(l, c, x, y, i4);
+                                                    verificarColisaoBomba(l, c, x, y, i5);
                                                     if (m[l][c] != 7 && m[l][c] != 8 && m[l][c] != 9 && m[l][c] != 10 && m[l][c] != 11 && m[l][c] != 12) {
                                                         m[l][c] = 6;
                                                     }
@@ -462,9 +584,11 @@ int main()
                                                             }
                                                         }
                                                     }
-                                                    verificarColisaoBomba(l, c, x, y, i1, p1);
-                                                    verificarColisaoBomba(l, c, x, y, i2, p1);
-                                                    verificarColisaoBomba(l, c, x, y, i3, p1);
+                                                    verificarColisaoBomba(l, c, x, y, i1);
+                                                    verificarColisaoBomba(l, c, x, y, i2);
+                                                    verificarColisaoBomba(l, c, x, y, i3);
+                                                    verificarColisaoBomba(l, c, x, y, i4);
+                                                    verificarColisaoBomba(l, c, x, y, i5);
                                                     if (m[l][c] != 7 && m[l][c] != 8 && m[l][c] != 9 && m[l][c] != 10 && m[l][c] != 11 && m[l][c] != 12) {
                                                         m[l][c] = 6;
                                                     }
@@ -491,9 +615,11 @@ int main()
                                                             }
                                                         }
                                                     }
-                                                    verificarColisaoBomba(l, c, x, y, i1, p1);
-                                                    verificarColisaoBomba(l, c, x, y, i2, p1);
-                                                    verificarColisaoBomba(l, c, x, y, i3, p1);
+                                                    verificarColisaoBomba(l, c, x, y, i1);
+                                                    verificarColisaoBomba(l, c, x, y, i2);
+                                                    verificarColisaoBomba(l, c, x, y, i3);
+                                                    verificarColisaoBomba(l, c, x, y, i4);
+                                                    verificarColisaoBomba(l, c, x, y, i5);
                                                     if (m[l][c] != 7 && m[l][c] != 8 && m[l][c] != 9 && m[l][c] != 10 && m[l][c] != 11 && m[l][c] != 12) {
                                                         m[l][c] = 6;
                                                     }
@@ -525,9 +651,11 @@ int main()
                                                                 }
                                                             }
                                                         }
-                                                        verificarColisaoBomba(l, c, x, y, i1, p1);
-                                                        verificarColisaoBomba(l, c, x, y, i2, p1);
-                                                        verificarColisaoBomba(l, c, x, y, i3, p1);
+                                                        verificarColisaoBomba(l, c, x, y, i1);
+                                                        verificarColisaoBomba(l, c, x, y, i2);
+                                                        verificarColisaoBomba(l, c, x, y, i3);
+                                                        verificarColisaoBomba(l, c, x, y, i4);
+                                                        verificarColisaoBomba(l, c, x, y, i5);
                                                         bombaColocada = false;
                                                         m[l][c] = 0;
                                                         m[b1.bx][b1.by] = 0;
@@ -548,9 +676,11 @@ int main()
                                                                 }
                                                             }
                                                         }
-                                                        verificarColisaoBomba(l, c, x, y, i1, p1);
-                                                        verificarColisaoBomba(l, c, x, y, i2, p1);
-                                                        verificarColisaoBomba(l, c, x, y, i3, p1);
+                                                        verificarColisaoBomba(l, c, x, y, i1);
+                                                        verificarColisaoBomba(l, c, x, y, i2);
+                                                        verificarColisaoBomba(l, c, x, y, i3);
+                                                        verificarColisaoBomba(l, c, x, y, i4);
+                                                        verificarColisaoBomba(l, c, x, y, i5);
                                                         bombaColocada = false;
                                                         m[l][c] = 0;
                                                         m[b1.bx][b1.by] = 0;
@@ -571,9 +701,11 @@ int main()
                                                                 }
                                                             }
                                                         }
-                                                        verificarColisaoBomba(l, c, x, y, i1, p1);
-                                                        verificarColisaoBomba(l, c, x, y, i2, p1);
-                                                        verificarColisaoBomba(l, c, x, y, i3, p1);
+                                                        verificarColisaoBomba(l, c, x, y, i1);
+                                                        verificarColisaoBomba(l, c, x, y, i2);
+                                                        verificarColisaoBomba(l, c, x, y, i3);
+                                                        verificarColisaoBomba(l, c, x, y, i4);
+                                                        verificarColisaoBomba(l, c, x, y, i5);
                                                         bombaColocada = false;
                                                         m[l][c] = 0;
                                                         m[b1.bx][b1.by] = 0;
@@ -594,9 +726,11 @@ int main()
                                                                 }
                                                             }
                                                         }
-                                                        verificarColisaoBomba(l, c, x, y, i1, p1);
-                                                        verificarColisaoBomba(l, c, x, y, i2, p1);
-                                                        verificarColisaoBomba(l, c, x, y, i3, p1);
+                                                        verificarColisaoBomba(l, c, x, y, i1);
+                                                        verificarColisaoBomba(l, c, x, y, i2);
+                                                        verificarColisaoBomba(l, c, x, y, i3);
+                                                        verificarColisaoBomba(l, c, x, y, i4);
+                                                        verificarColisaoBomba(l, c, x, y, i5);
                                                         bombaColocada = false;
                                                         m[l][c] = 0;
                                                         m[b1.bx][b1.by] = 0;
@@ -660,6 +794,9 @@ int main()
                             x = 1;
                             y = 1;
                             fase += 1;
+                            bombaGasta = p1.bombaGasta;
+                            movUtilizado = p1.movUtilizado;
+                            pontuacao = p1.pontuacao;
                             break;
                         }
 
@@ -681,7 +818,7 @@ int main()
                     system("cls");
 
                     if (i1.iniVivo == false && i2.iniVivo == false && i3.iniVivo == false) {
-                        cout<<"Voce matou todos os inimigos e ganhou o jogo, parabÃ©ns!"<<endl;
+                        cout<<"Voce matou todos os inimigos e ganhou o jogo, parabéns!"<<endl;
                         cout<<"Jogo feito por:"<<endl<<"Luiz Antonio Haenisch"<<endl<<"Daniel Machado"<<endl<<"Vitoria Araujo"<<endl;
                         cout<<"Professor: Alex Luciano"<<endl;
                         cout<<"Quer jogar novamente?"<<endl;
@@ -693,6 +830,8 @@ int main()
                     }
                     if (p1.vivo == 0) {
                         cout<<"Voce perdeu o jogo"<<endl;
+                        PlaySound(0,0,0);
+                        PlaySound(TEXT("perdeu.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_LOOP);
                         cout<<"Jogo feito por:"<<endl<<"Luiz Antonio Haenisch"<<endl<<"Daniel Machado"<<endl<<"Vitoria Araujo"<<endl;
                         cout<<"Professor: Alex Luciano"<<endl;
                         cout<<"Quer jogar novamente?"<<endl;
@@ -706,6 +845,8 @@ int main()
                 break;
             case 2:
                 system("cls");
+                PlaySound(0,0,0);
+                PlaySound(TEXT("dificuldade.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_LOOP);
                 cout<<"Selecione a Dificuldade que voce quer:\n";
                 cout<<endl;
                 cout<<"Facil (1): (Os Inimigos se movem totalmente aleatorio com apenas 3 em cada fase e um final especial)"<<endl;
